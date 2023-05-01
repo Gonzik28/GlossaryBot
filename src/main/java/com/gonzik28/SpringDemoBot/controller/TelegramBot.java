@@ -4,6 +4,7 @@ import com.gonzik28.SpringDemoBot.config.BotConfig;
 
 import com.gonzik28.SpringDemoBot.dto.RequestLevelOfStudyDto;
 import com.gonzik28.SpringDemoBot.dto.ResponseGlossaryDto;
+import com.gonzik28.SpringDemoBot.dto.ResponseLevelOfStudyDto;
 import com.gonzik28.SpringDemoBot.service.GlossaryService;
 import com.gonzik28.SpringDemoBot.service.LevelOfStudyService;
 import org.springframework.stereotype.Component;
@@ -22,14 +23,17 @@ import java.util.Set;
 public class TelegramBot extends TelegramLongPollingBot {
 
     final BotConfig config;
+    Boolean a = false;
     private final LevelOfStudyService levelOfStudyService;
     private final GlossaryService glossaryService;
     private final int MAX_QUESTIONS = 3;
+    private static final String HELP_TEXT = "This bot is creating to English glossary.\n"
+            + "Type /start too see a welcome message \n"
+            + "Type /teach too see a quiz message \n"
+            + "Type /exit too see a exit message";
 
-    private boolean isFinish;
-    private static final String HELP_TEXT = "This bot is creating to English glossary.\n" + "Type /start too see a welcome message \n" + "Type /teach too see a quiz message \n" + "Type /exit too see a exit message";
-
-    public TelegramBot(BotConfig config, LevelOfStudyService levelOfStudyService, GlossaryService glossaryService) {
+    public TelegramBot(BotConfig config, LevelOfStudyService levelOfStudyService,
+                       GlossaryService glossaryService) {
         this.config = config;
         this.levelOfStudyService = levelOfStudyService;
         this.glossaryService = glossaryService;
@@ -43,13 +47,29 @@ public class TelegramBot extends TelegramLongPollingBot {
 
     @Override
     public void onUpdateReceived(Update update) {
+        Integer num;
         if (update.hasMessage() && update.getMessage().hasText()) {
             String messageText = update.getMessage().getText();
             long chatId = update.getMessage().getChatId();
             String firstName = update.getMessage().getChat().getFirstName();
             String userName = update.getMessage().getChat().getUserName();
+            if (a) {
+                try {
+                    num = Integer.parseInt(messageText);
+                    if(num > 0){
+                        levelOfStudyService.update(Options.updateTime(userName, num));
+                        a = false;
+                        messageText = "/teach";
+                    }else{
+                        messageText = "/time";
+                    }
+                } catch (NumberFormatException e) {
+                    messageText = "/time";
+                }
+            }
             switch (messageText) {
                 case "/start":
+                    a = false;
                     startCommandReceived(chatId, firstName);
                     break;
                 case "A0":
@@ -59,22 +79,36 @@ public class TelegramBot extends TelegramLongPollingBot {
                 case "B2":
                 case "C1":
                 case "C2":
+                    a = false;
                     levelCommandReceived(chatId, userName, messageText);
                     break;
+                case "/time":
+                    a = true;
+                    timeCommandReceived(chatId, userName);
+                    break;
                 case "/teach":
-                    teachCommandReceived(chatId, userName, 50_000);
+                    a = false;
+                    teachCommandReceived(chatId, userName);
                     break;
                 case "/exit":
+                    a = false;
                     exitCommandReceived(chatId, firstName);
                     break;
                 case "/help":
+                    a = false;
                     sendMessage(chatId, HELP_TEXT);
                     break;
                 default:
+                    a = false;
                     sendMessage(chatId, "Sorry, command was not recognized");
             }
         }
 
+    }
+
+    private void timeCommandReceived(long chatId, String userName) {
+        String answer = "Введите количество минут, которые Вы готовы уделить изучению (целое число)";
+        sendMessage(chatId, answer, Options.keyboardTime());
     }
 
     @Override
@@ -92,7 +126,8 @@ public class TelegramBot extends TelegramLongPollingBot {
         requestLevelOfStudyDto.setUserName(userName);
         requestLevelOfStudyDto.setLevelOfStudy(level);
         levelOfStudyService.create(requestLevelOfStudyDto);
-        String answer = "I am making a program, you can type /teach command to start learning";
+        String answer = "I am making a program, you can type /teach command to start learning \n " +
+                "Training time is 1 minute, if you want to change it, click /time";
         sendMessage(chatId, answer);
     }
 
@@ -107,13 +142,15 @@ public class TelegramBot extends TelegramLongPollingBot {
     }
 
 
-    private void teachCommandReceived(long chatId, String userName, long time) {
+    private void teachCommandReceived(long chatId, String userName) {
+        ResponseLevelOfStudyDto responseLevelOfStudyDto = levelOfStudyService.findByUserName(userName);
+        long time = 60_000 * responseLevelOfStudyDto.getTimeClass();
         long start = System.currentTimeMillis();
         long finish;
-        do{
+        do {
             StringBuilder stringBuilder = new StringBuilder();
             stringBuilder.append("Выберите перевод слова ");
-            String level = levelOfStudyService.findByUserName(userName).getLevelOfStudy();
+            String level = responseLevelOfStudyDto.getLevelOfStudy();
             Set<ResponseGlossaryDto> glossarySet = glossaryService.findByLevelAll(level);
             List<ResponseGlossaryDto> glossaryDtoList = new ArrayList<>(glossarySet);
             List<String> options = new ArrayList<>();

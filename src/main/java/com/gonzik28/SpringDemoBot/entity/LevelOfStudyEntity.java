@@ -16,6 +16,7 @@ public class LevelOfStudyEntity {
     @Id
     private String userName;
     private String levelOfStudy;
+    private int timeClass;
     @ManyToMany
     @JoinTable(
             name = "glossary_level_of_study",

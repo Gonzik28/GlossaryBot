@@ -33,21 +33,35 @@ public class LevelOfStudyService {
         Set<GlossaryEntity> glossaryEntitySet = glossaryRepository.findAllByLevel(levelOfStudyDto.getLevelOfStudy());
         LevelOfStudyEntity levelOfStudyEntity = LevelOfStudyUtils.levelOfStudyDtoToEntity(levelOfStudyDto);
         levelOfStudyEntity.setGlossaryEntitySet(glossaryEntitySet);
+        levelOfStudyEntity.setTimeClass(1);
         levelOfStudyEntity = levelOfStudyRepository.save(levelOfStudyEntity);
         return LevelOfStudyUtils.levelOfStudyEntityToDto(levelOfStudyEntity);
     }
 
     public ResponseLevelOfStudyDto update(RequestLevelOfStudyDto levelOfStudyDto) {
+        String level;
+        int time;
         if (!levelOfStudyRepository.findByUserName(levelOfStudyDto.getUserName()).isPresent()) {
             throw new NoSuchElementException("Вы еще не зарегистрированны");
         } else {
             LevelOfStudyEntity levelOfStudyEntity = levelOfStudyRepository
                     .findByUserName(levelOfStudyDto.getUserName()).get();
-            levelOfStudyEntity.setLevelOfStudy(levelOfStudyDto.getLevelOfStudy());
-            levelOfStudyEntity.setUserName(levelOfStudyDto.getUserName());
+            if(levelOfStudyDto.getLevelOfStudy()==null){
+                level = levelOfStudyEntity.getLevelOfStudy();
+            }else{
+                level = levelOfStudyDto.getLevelOfStudy();
+            }
+            levelOfStudyEntity.setLevelOfStudy(level);
             Set<GlossaryEntity> glossaryEntitySet =
-                    glossaryRepository.findAllByLevel(levelOfStudyDto.getLevelOfStudy());
+                    glossaryRepository.findAllByLevel(level);
             levelOfStudyEntity.setGlossaryEntitySet(glossaryEntitySet);
+
+            if(levelOfStudyDto.getTimeClass() == null){
+                time = levelOfStudyEntity.getTimeClass();
+            }else{
+                time = levelOfStudyDto.getTimeClass();
+            }
+            levelOfStudyEntity.setTimeClass(time);
             levelOfStudyEntity = levelOfStudyRepository.save(levelOfStudyEntity);
             return LevelOfStudyUtils.levelOfStudyEntityToDto(levelOfStudyEntity);
         }

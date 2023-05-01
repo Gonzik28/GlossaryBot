@@ -11,6 +11,7 @@ public class LevelOfStudyUtils {
         responseLevelOfStudyDto.setLevelOfStudy(studyEntity.getLevelOfStudy());
         responseLevelOfStudyDto.setUserName(studyEntity.getUserName());
         responseLevelOfStudyDto.setGlossaries(studyEntity.getGlossaryEntitySet());
+        responseLevelOfStudyDto.setTimeClass(studyEntity.getTimeClass());
         return responseLevelOfStudyDto;
     }
 
