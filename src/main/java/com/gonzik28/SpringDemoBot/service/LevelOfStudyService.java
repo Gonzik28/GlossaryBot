@@ -25,8 +25,13 @@ public class LevelOfStudyService {
     }
 
     public ResponseLevelOfStudyDto findByUserName(String userName) {
-        LevelOfStudyEntity levelOfStudyEntity = levelOfStudyRepository.findByUserName(userName).get();
-        return LevelOfStudyUtils.levelOfStudyEntityToDto(levelOfStudyEntity);
+        LevelOfStudyEntity levelOfStudyEntity;
+        if(levelOfStudyRepository.findByUserName(userName).isPresent()){
+            levelOfStudyEntity = levelOfStudyRepository.findByUserName(userName).get();
+            return LevelOfStudyUtils.levelOfStudyEntityToDto(levelOfStudyEntity);
+        }else{
+            return null;
+        }
     }
 
     public ResponseLevelOfStudyDto create(RequestLevelOfStudyDto levelOfStudyDto) {

@@ -55,7 +55,8 @@ public class TelegramBot extends TelegramLongPollingBot {
             String firstName = update.getMessage().getChat().getFirstName();
             String userName = update.getMessage().getChat().getUserName();
             try {
-                if (levelOfStudyService.findByUserName(userName).getStudy()) {
+                if (levelOfStudyService.findByUserName(userName) != null &&
+                        levelOfStudyService.findByUserName(userName).getStudy()) {
                     Integer num = Integer.parseInt(messageText);
                     if (num > 0) {
                         levelOfStudyService.update(Options.updateTimeFalse(userName, num));
@@ -119,9 +120,9 @@ public class TelegramBot extends TelegramLongPollingBot {
         requestLevelOfStudyDto.setUserName(userName);
         requestLevelOfStudyDto.setLevelOfStudy(level);
         requestLevelOfStudyDto.setStudy(false);
-        if(levelOfStudyService.findByUserName(userName)!=null){
+        if (levelOfStudyService.findByUserName(userName) != null) {
             levelOfStudyService.update(requestLevelOfStudyDto);
-        }else {
+        } else {
             levelOfStudyService.create(requestLevelOfStudyDto);
         }
         String answer = "I am making a program, you can type /teach command to start learning \n " +
