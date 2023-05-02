@@ -47,12 +47,14 @@ public class Options {
         return replyKeyboardMarkup;
     }
 
-    static RequestLevelOfStudyDto updateTime(String userName, Integer number){
+    static RequestLevelOfStudyDto updateTimeFalse(String userName, Integer number){
         RequestLevelOfStudyDto requestLevelOfStudyDto = new RequestLevelOfStudyDto();
         requestLevelOfStudyDto.setUserName(userName);
         requestLevelOfStudyDto.setTimeClass(number);
+        requestLevelOfStudyDto.setStudy(false);
         return requestLevelOfStudyDto;
     }
+
     static Set<Integer> generatorIndex(int maxValue, int sizeSet) {
         Set<Integer> indexes = new HashSet<>();
         while (indexes.size() < maxValue) {

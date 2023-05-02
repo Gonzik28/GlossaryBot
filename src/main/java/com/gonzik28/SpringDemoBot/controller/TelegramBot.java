@@ -17,6 +17,7 @@ import org.telegram.telegrambots.meta.api.methods.polls.SendPoll;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.NoSuchElementException;
 import java.util.Set;
 
 @Component
@@ -29,6 +30,7 @@ public class TelegramBot extends TelegramLongPollingBot {
     private final int MAX_QUESTIONS = 3;
     private static final String HELP_TEXT = "This bot is creating to English glossary.\n"
             + "Type /start too see a welcome message \n"
+            + "Type /time change time quiz \n"
             + "Type /teach too see a quiz message \n"
             + "Type /exit too see a exit message";
 
@@ -47,29 +49,26 @@ public class TelegramBot extends TelegramLongPollingBot {
 
     @Override
     public void onUpdateReceived(Update update) {
-        Integer num;
         if (update.hasMessage() && update.getMessage().hasText()) {
             String messageText = update.getMessage().getText();
             long chatId = update.getMessage().getChatId();
             String firstName = update.getMessage().getChat().getFirstName();
             String userName = update.getMessage().getChat().getUserName();
-            if (a) {
-                try {
-                    num = Integer.parseInt(messageText);
-                    if(num > 0){
-                        levelOfStudyService.update(Options.updateTime(userName, num));
-                        a = false;
+            try {
+                if (levelOfStudyService.findByUserName(userName).getStudy()) {
+                    Integer num = Integer.parseInt(messageText);
+                    if (num > 0) {
+                        levelOfStudyService.update(Options.updateTimeFalse(userName, num));
                         messageText = "/teach";
-                    }else{
+                    } else {
                         messageText = "/time";
                     }
-                } catch (NumberFormatException e) {
-                    messageText = "/time";
                 }
+            } catch (NoSuchElementException | NumberFormatException e) {
+                e.getMessage();
             }
             switch (messageText) {
                 case "/start":
-                    a = false;
                     startCommandReceived(chatId, firstName);
                     break;
                 case "A0":
@@ -79,34 +78,28 @@ public class TelegramBot extends TelegramLongPollingBot {
                 case "B2":
                 case "C1":
                 case "C2":
-                    a = false;
                     levelCommandReceived(chatId, userName, messageText);
                     break;
                 case "/time":
-                    a = true;
-                    timeCommandReceived(chatId, userName);
+                    levelOfStudyService.updateTime(userName, true);
+                    timeCommandReceived(chatId);
                     break;
                 case "/teach":
-                    a = false;
                     teachCommandReceived(chatId, userName);
                     break;
                 case "/exit":
-                    a = false;
                     exitCommandReceived(chatId, firstName);
                     break;
                 case "/help":
-                    a = false;
                     sendMessage(chatId, HELP_TEXT);
                     break;
                 default:
-                    a = false;
                     sendMessage(chatId, "Sorry, command was not recognized");
             }
         }
-
     }
 
-    private void timeCommandReceived(long chatId, String userName) {
+    private void timeCommandReceived(long chatId) {
         String answer = "Введите количество минут, которые Вы готовы уделить изучению (целое число)";
         sendMessage(chatId, answer, Options.keyboardTime());
     }
@@ -125,7 +118,12 @@ public class TelegramBot extends TelegramLongPollingBot {
         RequestLevelOfStudyDto requestLevelOfStudyDto = new RequestLevelOfStudyDto();
         requestLevelOfStudyDto.setUserName(userName);
         requestLevelOfStudyDto.setLevelOfStudy(level);
-        levelOfStudyService.create(requestLevelOfStudyDto);
+        requestLevelOfStudyDto.setStudy(false);
+        if(levelOfStudyService.findByUserName(userName)!=null){
+            levelOfStudyService.update(requestLevelOfStudyDto);
+        }else {
+            levelOfStudyService.create(requestLevelOfStudyDto);
+        }
         String answer = "I am making a program, you can type /teach command to start learning \n " +
                 "Training time is 1 minute, if you want to change it, click /time";
         sendMessage(chatId, answer);

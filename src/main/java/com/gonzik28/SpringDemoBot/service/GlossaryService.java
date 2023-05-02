@@ -16,7 +16,7 @@ public class GlossaryService {
     @Autowired
     private GlossaryRepository glossaryRepository;
 
-    public ResponseGlossaryDto findByWord (String word) {
+    public ResponseGlossaryDto findByWord(String word) {
         GlossaryEntity glossaryEntities = glossaryRepository.findByWord(word).get();
         return GlossaryUtils.levelOfStudyEntityToDto(glossaryEntities);
     }

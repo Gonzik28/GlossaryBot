@@ -12,5 +12,6 @@ public class ResponseLevelOfStudyDto {
     private String userName;
     private String levelOfStudy;
     private int timeClass;
+    private Boolean study;
     private Set<GlossaryEntity> glossaries;
 }
