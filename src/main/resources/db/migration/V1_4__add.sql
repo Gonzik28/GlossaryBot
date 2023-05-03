@@ -1,1 +1,0 @@
-ALTER TABLE level_of_study ADD study BOOLEAN DEFAULT false;
