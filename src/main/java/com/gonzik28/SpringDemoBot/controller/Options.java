@@ -1,6 +1,7 @@
 package com.gonzik28.SpringDemoBot.controller;
 
 import com.gonzik28.SpringDemoBot.dto.RequestLevelOfStudyDto;
+import com.gonzik28.SpringDemoBot.dto.RequestStudyOptionsDto;
 import org.telegram.telegrambots.meta.api.methods.commands.SetMyCommands;
 import org.telegram.telegrambots.meta.api.objects.commands.BotCommand;
 import org.telegram.telegrambots.meta.api.objects.commands.scope.BotCommandScopeDefault;
@@ -8,10 +9,7 @@ import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboardMar
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.KeyboardButton;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.KeyboardRow;
 
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.ThreadLocalRandom;
 
 public class Options {
@@ -51,8 +49,17 @@ public class Options {
         RequestLevelOfStudyDto requestLevelOfStudyDto = new RequestLevelOfStudyDto();
         requestLevelOfStudyDto.setUserName(userName);
         requestLevelOfStudyDto.setTimeClass(number);
-        requestLevelOfStudyDto.setStudy(false);
         return requestLevelOfStudyDto;
+    }
+
+    static RequestStudyOptionsDto pollSetNull(Long chatId, String userName, boolean isStudy){
+        RequestStudyOptionsDto requestStudyOptionsDto = new RequestStudyOptionsDto();
+        requestStudyOptionsDto.setId(UUID.randomUUID().toString());
+        requestStudyOptionsDto.setChatId(String.valueOf(chatId));
+        requestStudyOptionsDto.setUserName(userName);
+        requestStudyOptionsDto.setPollId(null);
+        requestStudyOptionsDto.setStudy(isStudy);
+        return requestStudyOptionsDto;
     }
 
     static Set<Integer> generatorIndex(int maxValue, int sizeSet) {
@@ -73,4 +80,5 @@ public class Options {
         commands.add(new BotCommand("/help", "Подсказка о командах"));
         return new SetMyCommands(commands, new BotCommandScopeDefault(), null);
     }
+
 }

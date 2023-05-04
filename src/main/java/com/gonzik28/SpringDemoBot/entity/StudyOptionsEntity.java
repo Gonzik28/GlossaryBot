@@ -20,4 +20,5 @@ public class StudyOptionsEntity {
     private String chatId;
     @Column(name = "poll_id")
     private String pollId;
+    private Long startPollTime;
 }

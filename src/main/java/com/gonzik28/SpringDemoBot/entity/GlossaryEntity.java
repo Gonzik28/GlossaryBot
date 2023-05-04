@@ -13,9 +13,8 @@ import java.util.Set;
 @Setter
 public class GlossaryEntity {
     public static final String TABLE = "glossary";
-    @Id
-    private String word;
-    private String translate;
+    @EmbeddedId
+    private GlossaryId id;
     private String level;
     @ManyToMany(mappedBy = "glossaryEntitySet")
     private Set<LevelOfStudyEntity> levelOfStudyEntities = new HashSet<>();

@@ -11,5 +11,6 @@ public class RequestStudyOptionsDto {
     private String userName;
     private String chatId;
     private String pollId;
+    private Long startPollTime;
     private boolean study;
 }

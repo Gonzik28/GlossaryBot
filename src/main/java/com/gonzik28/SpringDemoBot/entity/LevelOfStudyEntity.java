@@ -17,12 +17,15 @@ public class LevelOfStudyEntity {
     private String userName;
     private String levelOfStudy;
     private int timeClass;
-    private boolean study;
     @ManyToMany
     @JoinTable(
             name = "glossary_level_of_study",
             joinColumns = @JoinColumn(name = "user_name"),
-            inverseJoinColumns = @JoinColumn(name = "word"))
+            inverseJoinColumns = {
+                    @JoinColumn(name = "glossary_key_translate"),
+                    @JoinColumn(name = "glossary_key_word"),
+            })
     private Set<GlossaryEntity> glossaryEntitySet = new HashSet<>();
-
+    @OneToOne(mappedBy = "levelOfStudy")
+    private StudyOptionsEntity studyOptionsEntity;
 }

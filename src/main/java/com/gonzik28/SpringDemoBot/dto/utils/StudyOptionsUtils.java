@@ -21,6 +21,9 @@ public class StudyOptionsUtils {
         if(studyOptions.getPollId()!=null){
             responseStudyOptionsDto.setPollId(studyOptions.getPollId());
         }
+        if(studyOptions.getStartPollTime()!=null){
+            responseStudyOptionsDto.setStartPollTime(studyOptions.getStartPollTime());
+        }
         return responseStudyOptionsDto;
     }
 
@@ -35,6 +38,9 @@ public class StudyOptionsUtils {
         }
         if(requestStudyOptionsDto.getPollId()!=null){
             studyOptionsEntity.setPollId(requestStudyOptionsDto.getPollId());
+        }
+        if(requestStudyOptionsDto.getStartPollTime()!=null){
+            studyOptionsEntity.setStartPollTime(requestStudyOptionsDto.getStartPollTime());
         }
         return studyOptionsEntity;
     }

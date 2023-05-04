@@ -9,5 +9,4 @@ public class RequestLevelOfStudyDto {
     private String userName;
     private String levelOfStudy;
     private Integer timeClass;
-    private Boolean study;
 }

@@ -25,9 +25,8 @@ public class LevelOfStudyService {
     }
 
     public ResponseLevelOfStudyDto findByUserName(String userName) {
-        LevelOfStudyEntity levelOfStudyEntity;
         if(levelOfStudyRepository.findByUserName(userName).isPresent()){
-            levelOfStudyEntity = levelOfStudyRepository.findByUserName(userName).get();
+            LevelOfStudyEntity levelOfStudyEntity = levelOfStudyRepository.findByUserName(userName).get();
             return LevelOfStudyUtils.levelOfStudyEntityToDto(levelOfStudyEntity);
         }else{
             return null;
@@ -39,7 +38,6 @@ public class LevelOfStudyService {
         LevelOfStudyEntity levelOfStudyEntity = LevelOfStudyUtils.levelOfStudyDtoToEntity(levelOfStudyDto);
         levelOfStudyEntity.setGlossaryEntitySet(glossaryEntitySet);
         levelOfStudyEntity.setTimeClass(1);
-        levelOfStudyEntity.setStudy(levelOfStudyDto.getStudy());
         levelOfStudyEntity = levelOfStudyRepository.save(levelOfStudyEntity);
         return LevelOfStudyUtils.levelOfStudyEntityToDto(levelOfStudyEntity);
     }
@@ -73,15 +71,6 @@ public class LevelOfStudyService {
         }
     }
 
-    public void updateTime(String userName, boolean isStudy) {
-        if (!levelOfStudyRepository.findByUserName(userName).isPresent()) {
-            throw new NoSuchElementException("Вы еще не зарегистрированны");
-        } else {
-            LevelOfStudyEntity levelOfStudyEntity = levelOfStudyRepository.findByUserName(userName).get();
-            levelOfStudyEntity.setStudy(isStudy);
-            levelOfStudyRepository.save(levelOfStudyEntity);
-        }
-    }
 
     public void delete(String userName) {
         levelOfStudyRepository.deleteByUserName(userName);

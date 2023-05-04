@@ -12,4 +12,5 @@ public class ResponseStudyOptionsDto {
     private boolean study;
     private String chatId;
     private String pollId;
+    private Long startPollTime;
 }

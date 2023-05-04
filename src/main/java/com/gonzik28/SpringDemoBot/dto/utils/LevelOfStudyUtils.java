@@ -12,7 +12,6 @@ public class LevelOfStudyUtils {
         responseLevelOfStudyDto.setUserName(studyEntity.getUserName());
         responseLevelOfStudyDto.setGlossaries(studyEntity.getGlossaryEntitySet());
         responseLevelOfStudyDto.setTimeClass(studyEntity.getTimeClass());
-        responseLevelOfStudyDto.setStudy(studyEntity.isStudy());
         return responseLevelOfStudyDto;
     }
 
@@ -20,7 +19,6 @@ public class LevelOfStudyUtils {
         LevelOfStudyEntity studyEntity = new LevelOfStudyEntity();
         studyEntity.setLevelOfStudy(requestLevelOfStudyDto.getLevelOfStudy());
         studyEntity.setUserName(requestLevelOfStudyDto.getUserName());
-        studyEntity.setStudy(requestLevelOfStudyDto.getStudy());
         return studyEntity;
     }
 }
