@@ -2,9 +2,13 @@ package com.gonzik28.SpringDemoBot.controller;
 
 import com.gonzik28.SpringDemoBot.dto.RequestLevelOfStudyDto;
 import com.gonzik28.SpringDemoBot.dto.RequestStudyOptionsDto;
+import com.gonzik28.SpringDemoBot.dto.ResponseLevelOfStudyDto;
+import com.gonzik28.SpringDemoBot.dto.ResponseStudyOptionsDto;
+import com.gonzik28.SpringDemoBot.service.StudyOptionsService;
 import org.telegram.telegrambots.meta.api.methods.commands.SetMyCommands;
 import org.telegram.telegrambots.meta.api.objects.commands.BotCommand;
 import org.telegram.telegrambots.meta.api.objects.commands.scope.BotCommandScopeDefault;
+import org.telegram.telegrambots.meta.api.objects.polls.Poll;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboardMarkup;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.KeyboardButton;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.KeyboardRow;
@@ -81,4 +85,42 @@ public class Options {
         return new SetMyCommands(commands, new BotCommandScopeDefault(), null);
     }
 
+    static boolean isPoolSend(Poll poll, StudyOptionsService studyOptionsService) {
+        ResponseStudyOptionsDto responseStudyOptionsDto =
+                studyOptionsService.findByPollId(poll.getId());
+        if (pollIsOpen(poll, studyOptionsService) && timeIsExit(responseStudyOptionsDto)) {
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+    static boolean isExitPoolSend(Poll poll, StudyOptionsService studyOptionsService) {
+        ResponseStudyOptionsDto responseStudyOptionsDto = studyOptionsService.findByPollId(poll.getId());
+        if (pollIsOpen(poll, studyOptionsService) && !timeIsExit(responseStudyOptionsDto)) {
+            String userName = studyOptionsService.findByPollId(poll.getId())
+                    .getResponseLevelOfStudyDto().getUserName();
+            studyOptionsService.updateStudy(userName, false, null);
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+    static boolean pollIsOpen(Poll poll, StudyOptionsService studyOptionsService){
+        boolean isPoll = (poll != null);
+        boolean pollSave = (studyOptionsService.findByPollId(poll.getId()) != null);
+        if(pollSave && isPoll){
+            return true;
+        }else{
+            return false;
+        }
+    }
+
+    static boolean timeIsExit(ResponseStudyOptionsDto responseStudyOptionsDto){
+        ResponseLevelOfStudyDto responseLevelOfStudyDto =
+                responseStudyOptionsDto.getResponseLevelOfStudyDto();
+        return responseStudyOptionsDto.getStartPollTime() +
+                60_000 * responseLevelOfStudyDto.getTimeClass() > System.currentTimeMillis();
+    }
 }

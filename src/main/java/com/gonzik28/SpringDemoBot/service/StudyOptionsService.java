@@ -59,18 +59,6 @@ public class StudyOptionsService {
         return StudyOptionsUtils.optionsEntityToDto(studyOptionsEntity);
     }
 
-//    public void updateTime(String userName, boolean isStudy) {
-//        LevelOfStudyEntity levelOfStudyEntity = levelOfStudyRepository.findByUserName(userName).get();
-//        if (!studyOptionsRepository.findByLevelOfStudy(levelOfStudyEntity).isPresent()) {
-//            throw new NoSuchElementException("Вы еще не зарегистрированны");
-//        } else {
-//            StudyOptionsEntity studyOptionsEntity =
-//                    studyOptionsRepository.findByLevelOfStudy(levelOfStudyEntity).get();
-//            studyOptionsEntity.setStudy(isStudy);
-//            studyOptionsRepository.save(studyOptionsEntity);
-//        }
-//    }
-
     public void updatePoll(String userName, String pollId) {
         LevelOfStudyEntity levelOfStudyEntity = levelOfStudyRepository.findByUserName(userName).get();
         if (!studyOptionsRepository.findByLevelOfStudy(levelOfStudyEntity).isPresent()) {

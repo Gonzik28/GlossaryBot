@@ -101,20 +101,19 @@ public class TelegramBot extends TelegramLongPollingBot {
                 default:
                     sendMessage(chatId, "Sorry, command was not recognized");
             }
-        } else if (update.getPoll() != null && studyOptionsService.findByPollId(update.getPoll().getId())!=null){
-            ResponseStudyOptionsDto responseStudyOptionsDto =
-                    studyOptionsService.findByPollId(update.getPoll().getId());
-            long chatId = Long.parseLong(responseStudyOptionsDto.getChatId().trim());
-            String userName = responseStudyOptionsDto.getResponseLevelOfStudyDto().getUserName();
-            boolean isTimeIntervalClass = studyOptionsService.findByPollId(update.getPoll().getId()).getStartPollTime() +
-                    60_000 * levelOfStudyService.findByUserName(userName).getTimeClass() > System.currentTimeMillis();
-            if(isTimeIntervalClass){
-                teachCommandReceived(chatId, userName);
-            }else{
-                studyOptionsService.updateStudy(userName, false, null);
-                sendMessage(chatId, "Yor time class finish");
-                studyOptionsService.updatePoll(userName, null);
-            }
+        } else if (Options.isPoolSend(update.getPoll(), studyOptionsService)) {
+            long chatId = Long.parseLong(studyOptionsService.findByPollId(update.getPoll().getId())
+                    .getChatId().trim());
+            String userName = studyOptionsService.findByPollId(update.getPoll().getId())
+                    .getResponseLevelOfStudyDto().getUserName();
+            teachCommandReceived(chatId, userName);
+        } else if (Options.isExitPoolSend(update.getPoll(), studyOptionsService)) {
+            long chatId = Long.parseLong(studyOptionsService.findByPollId(update.getPoll().getId())
+                    .getChatId().trim());
+            String userName = studyOptionsService.findByPollId(update.getPoll().getId())
+                    .getResponseLevelOfStudyDto().getUserName();
+            sendMessage(chatId, "Yor time class finish");
+            studyOptionsService.updatePoll(userName, null);
         }
     }
 
@@ -137,14 +136,10 @@ public class TelegramBot extends TelegramLongPollingBot {
         RequestLevelOfStudyDto requestLevelOfStudyDto = new RequestLevelOfStudyDto();
         requestLevelOfStudyDto.setUserName(userName);
         requestLevelOfStudyDto.setLevelOfStudy(level);
-        if (levelOfStudyService.findByUserName(userName) != null) {
-            levelOfStudyService.update(requestLevelOfStudyDto);
-        } else {
-            levelOfStudyService.create(requestLevelOfStudyDto);
-        }
-        if(studyOptionsService.findByUserName(userName)==null){
+        levelOfStudyService.create(requestLevelOfStudyDto);
+        if (studyOptionsService.findByUserName(userName) == null) {
             studyOptionsService.create(Options.pollSetNull(chatId, userName, false));
-        }else{
+        } else {
             studyOptionsService.updateStudy(userName, false, null);
         }
         String answer = "I am making a program, you can type /teach command to start learning \n " +
@@ -154,10 +149,10 @@ public class TelegramBot extends TelegramLongPollingBot {
 
     private void startCommandReceived(long chatId, String name, String userName) {
         StringBuilder answer = new StringBuilder("Hi, " + name + ", nice to meet you!");
-        if(levelOfStudyService.findByUserName(userName)==null){
+        if (levelOfStudyService.findByUserName(userName) == null) {
             answer.append('\n' + "Indicate your level of knowledge");
             sendMessage(chatId, answer.toString(), Options.keyboardKnowledgeLevel());
-        }else{
+        } else {
             sendMessage(chatId, answer.toString());
         }
     }
@@ -172,13 +167,7 @@ public class TelegramBot extends TelegramLongPollingBot {
         String level = responseLevelOfStudyDto.getLevelOfStudy();
         Set<ResponseGlossaryDto> glossarySet = glossaryService.findByLevelAll(level);
         List<ResponseGlossaryDto> glossaryDtoList = new ArrayList<>(glossarySet);
-        long time = 60_000 * responseLevelOfStudyDto.getTimeClass();
-        long start = System.currentTimeMillis();
-        long finish;
-//        do {
         generatorPoll(chatId, glossaryDtoList, userName);
-//            finish = System.currentTimeMillis();
-//        } while (finish - start < time);
     }
 
     private void generatorPoll(Long chatId, List<ResponseGlossaryDto> glossaryDtoList, String userName) {

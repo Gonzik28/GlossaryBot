@@ -25,47 +25,55 @@ public class LevelOfStudyService {
     }
 
     public ResponseLevelOfStudyDto findByUserName(String userName) {
-        if(levelOfStudyRepository.findByUserName(userName).isPresent()){
+        if (levelOfStudyRepository.findByUserName(userName).isPresent()) {
             LevelOfStudyEntity levelOfStudyEntity = levelOfStudyRepository.findByUserName(userName).get();
             return LevelOfStudyUtils.levelOfStudyEntityToDto(levelOfStudyEntity);
-        }else{
+        } else {
             return null;
         }
     }
 
     public ResponseLevelOfStudyDto create(RequestLevelOfStudyDto levelOfStudyDto) {
-        Set<GlossaryEntity> glossaryEntitySet = glossaryRepository.findAllByLevel(levelOfStudyDto.getLevelOfStudy());
-        LevelOfStudyEntity levelOfStudyEntity = LevelOfStudyUtils.levelOfStudyDtoToEntity(levelOfStudyDto);
-        levelOfStudyEntity.setGlossaryEntitySet(glossaryEntitySet);
-        levelOfStudyEntity.setTimeClass(1);
-        levelOfStudyEntity = levelOfStudyRepository.save(levelOfStudyEntity);
-        return LevelOfStudyUtils.levelOfStudyEntityToDto(levelOfStudyEntity);
+        if (levelOfStudyRepository.findByUserName(levelOfStudyDto.getUserName()).isPresent()) {
+            return update(levelOfStudyDto);
+        } else {
+            Set<GlossaryEntity> glossaryEntitySet = glossaryRepository.findAllByLevel(levelOfStudyDto.getLevelOfStudy());
+            LevelOfStudyEntity levelOfStudyEntity = LevelOfStudyUtils.levelOfStudyDtoToEntity(levelOfStudyDto);
+            levelOfStudyEntity.setGlossaryEntitySet(glossaryEntitySet);
+            levelOfStudyEntity.setTimeClass(1);
+            levelOfStudyEntity = levelOfStudyRepository.save(levelOfStudyEntity);
+            return LevelOfStudyUtils.levelOfStudyEntityToDto(levelOfStudyEntity);
+        }
     }
 
     public ResponseLevelOfStudyDto update(RequestLevelOfStudyDto levelOfStudyDto) {
         String level;
         int time;
+        Set<GlossaryEntity> glossaryEntitySet;
         if (!levelOfStudyRepository.findByUserName(levelOfStudyDto.getUserName()).isPresent()) {
             throw new NoSuchElementException("Вы еще не зарегистрированны");
         } else {
             LevelOfStudyEntity levelOfStudyEntity = levelOfStudyRepository
                     .findByUserName(levelOfStudyDto.getUserName()).get();
-            if(levelOfStudyDto.getLevelOfStudy()==null){
-                level = levelOfStudyEntity.getLevelOfStudy();
-            }else{
-                level = levelOfStudyDto.getLevelOfStudy();
-            }
-            levelOfStudyEntity.setLevelOfStudy(level);
-            Set<GlossaryEntity> glossaryEntitySet =
-                    glossaryRepository.findAllByLevel(level);
-            levelOfStudyEntity.setGlossaryEntitySet(glossaryEntitySet);
-
-            if(levelOfStudyDto.getTimeClass() == null){
+            if (levelOfStudyDto.getTimeClass() == null) {
                 time = levelOfStudyEntity.getTimeClass();
-            }else{
+            } else {
                 time = levelOfStudyDto.getTimeClass();
             }
             levelOfStudyEntity.setTimeClass(time);
+            if (levelOfStudyDto.getLevelOfStudy() == null) {
+                level = levelOfStudyEntity.getLevelOfStudy();
+                glossaryEntitySet = levelOfStudyEntity.getGlossaryEntitySet();
+            } else {
+                levelOfStudyEntity.setGlossaryEntitySet(null);
+                levelOfStudyEntity = levelOfStudyRepository.save(levelOfStudyEntity);
+
+                level = levelOfStudyDto.getLevelOfStudy();
+                glossaryEntitySet = glossaryRepository.findAllByLevel(level);
+            }
+            levelOfStudyEntity.setLevelOfStudy(level);
+            levelOfStudyEntity.setGlossaryEntitySet(glossaryEntitySet);
+
             levelOfStudyEntity = levelOfStudyRepository.save(levelOfStudyEntity);
             return LevelOfStudyUtils.levelOfStudyEntityToDto(levelOfStudyEntity);
         }
