@@ -10,8 +10,11 @@ public class LevelOfStudyUtils {
         ResponseLevelOfStudyDto responseLevelOfStudyDto = new ResponseLevelOfStudyDto();
         responseLevelOfStudyDto.setLevelOfStudy(studyEntity.getLevelOfStudy());
         responseLevelOfStudyDto.setUserName(studyEntity.getUserName());
-        responseLevelOfStudyDto.setGlossaries(studyEntity.getGlossaryEntitySet());
         responseLevelOfStudyDto.setTimeClass(studyEntity.getTimeClass());
+        responseLevelOfStudyDto.setStudy(studyEntity.isStudy());
+        responseLevelOfStudyDto.setChatId(studyEntity.getChatId());
+        responseLevelOfStudyDto.setPollId(studyEntity.getPollId());
+        responseLevelOfStudyDto.setStartPollTime(studyEntity.getStartPollTime());
         return responseLevelOfStudyDto;
     }
 
@@ -19,6 +22,11 @@ public class LevelOfStudyUtils {
         LevelOfStudyEntity studyEntity = new LevelOfStudyEntity();
         studyEntity.setLevelOfStudy(requestLevelOfStudyDto.getLevelOfStudy());
         studyEntity.setUserName(requestLevelOfStudyDto.getUserName());
+        studyEntity.setStudy(requestLevelOfStudyDto.isStudy());
+        studyEntity.setChatId(requestLevelOfStudyDto.getChatId());
+        studyEntity.setTimeClass(requestLevelOfStudyDto.getTimeClass());
+        studyEntity.setPollId(requestLevelOfStudyDto.getPollId());
+        studyEntity.setStartPollTime(requestLevelOfStudyDto.getStartPollTime());
         return studyEntity;
     }
 }

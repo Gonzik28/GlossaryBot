@@ -1,10 +1,8 @@
 package com.gonzik28.SpringDemoBot.controller;
 
 import com.gonzik28.SpringDemoBot.dto.RequestLevelOfStudyDto;
-import com.gonzik28.SpringDemoBot.dto.RequestStudyOptionsDto;
 import com.gonzik28.SpringDemoBot.dto.ResponseLevelOfStudyDto;
-import com.gonzik28.SpringDemoBot.dto.ResponseStudyOptionsDto;
-import com.gonzik28.SpringDemoBot.service.StudyOptionsService;
+import com.gonzik28.SpringDemoBot.service.LevelOfStudyService;
 import org.telegram.telegrambots.meta.api.methods.commands.SetMyCommands;
 import org.telegram.telegrambots.meta.api.objects.commands.BotCommand;
 import org.telegram.telegrambots.meta.api.objects.commands.scope.BotCommandScopeDefault;
@@ -49,21 +47,12 @@ public class Options {
         return replyKeyboardMarkup;
     }
 
-    static RequestLevelOfStudyDto updateTimeFalse(String userName, Integer number){
+    static RequestLevelOfStudyDto updateTimeFalse(String userName, Integer number, boolean isStudy){
         RequestLevelOfStudyDto requestLevelOfStudyDto = new RequestLevelOfStudyDto();
+        requestLevelOfStudyDto.setStudy(isStudy);
         requestLevelOfStudyDto.setUserName(userName);
         requestLevelOfStudyDto.setTimeClass(number);
         return requestLevelOfStudyDto;
-    }
-
-    static RequestStudyOptionsDto pollSetNull(Long chatId, String userName, boolean isStudy){
-        RequestStudyOptionsDto requestStudyOptionsDto = new RequestStudyOptionsDto();
-        requestStudyOptionsDto.setId(UUID.randomUUID().toString());
-        requestStudyOptionsDto.setChatId(String.valueOf(chatId));
-        requestStudyOptionsDto.setUserName(userName);
-        requestStudyOptionsDto.setPollId(null);
-        requestStudyOptionsDto.setStudy(isStudy);
-        return requestStudyOptionsDto;
     }
 
     static Set<Integer> generatorIndex(int maxValue, int sizeSet) {
@@ -85,31 +74,30 @@ public class Options {
         return new SetMyCommands(commands, new BotCommandScopeDefault(), null);
     }
 
-    static boolean isPoolSend(Poll poll, StudyOptionsService studyOptionsService) {
-        ResponseStudyOptionsDto responseStudyOptionsDto =
-                studyOptionsService.findByPollId(poll.getId());
-        if (pollIsOpen(poll, studyOptionsService) && timeIsExit(responseStudyOptionsDto)) {
+    static boolean isPoolSend(Poll poll, LevelOfStudyService levelOfStudyService) {
+        ResponseLevelOfStudyDto responseLevelOfStudyDto =
+                levelOfStudyService.findByPollId(poll.getId());
+        if (pollIsOpen(poll, levelOfStudyService) && timeIsExit(responseLevelOfStudyDto)) {
             return true;
         } else {
             return false;
         }
     }
 
-    static boolean isExitPoolSend(Poll poll, StudyOptionsService studyOptionsService) {
-        ResponseStudyOptionsDto responseStudyOptionsDto = studyOptionsService.findByPollId(poll.getId());
-        if (pollIsOpen(poll, studyOptionsService) && !timeIsExit(responseStudyOptionsDto)) {
-            String userName = studyOptionsService.findByPollId(poll.getId())
-                    .getResponseLevelOfStudyDto().getUserName();
-            studyOptionsService.updateStudy(userName, false, null);
+    static boolean isExitPoolSend(Poll poll, LevelOfStudyService levelOfStudyService) {
+        ResponseLevelOfStudyDto responseLevelOfStudyDto = levelOfStudyService.findByPollId(poll.getId());
+        if (pollIsOpen(poll, levelOfStudyService) && !timeIsExit(responseLevelOfStudyDto)) {
+            String userName = levelOfStudyService.findByPollId(poll.getId()).getUserName();
+            levelOfStudyService.updateStudy(userName, false, null);
             return true;
         } else {
             return false;
         }
     }
 
-    static boolean pollIsOpen(Poll poll, StudyOptionsService studyOptionsService){
+    static boolean pollIsOpen(Poll poll, LevelOfStudyService levelOfStudyService){
         boolean isPoll = (poll != null);
-        boolean pollSave = (studyOptionsService.findByPollId(poll.getId()) != null);
+        boolean pollSave = (levelOfStudyService.findByPollId(poll.getId()) != null);
         if(pollSave && isPoll){
             return true;
         }else{
@@ -117,10 +105,16 @@ public class Options {
         }
     }
 
-    static boolean timeIsExit(ResponseStudyOptionsDto responseStudyOptionsDto){
-        ResponseLevelOfStudyDto responseLevelOfStudyDto =
-                responseStudyOptionsDto.getResponseLevelOfStudyDto();
-        return responseStudyOptionsDto.getStartPollTime() +
+    static boolean timeIsExit(ResponseLevelOfStudyDto responseLevelOfStudyDto){
+        return responseLevelOfStudyDto.getStartPollTime() +
                 60_000 * responseLevelOfStudyDto.getTimeClass() > System.currentTimeMillis();
+    }
+
+    public static RequestLevelOfStudyDto pollSetNull(long chatId, String userName, boolean isStudy) {
+        RequestLevelOfStudyDto requestLevelOfStudyDto = new RequestLevelOfStudyDto();
+        requestLevelOfStudyDto.setChatId(String.valueOf(chatId));
+        requestLevelOfStudyDto.setUserName(userName);
+        requestLevelOfStudyDto.setStudy(isStudy);
+        return requestLevelOfStudyDto;
     }
 }

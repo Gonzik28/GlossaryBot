@@ -7,5 +7,6 @@ import java.util.Optional;
 
 public interface LevelOfStudyRepository extends JpaRepository<LevelOfStudyEntity, String> {
     Optional<LevelOfStudyEntity> findByUserName(String userName);
+    Optional<LevelOfStudyEntity> findByPollId(String pollId);
     void deleteByUserName(String userName);
 }

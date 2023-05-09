@@ -19,7 +19,8 @@ public class LevelOfStudyService {
     private final LevelOfStudyRepository levelOfStudyRepository;
     private final GlossaryRepository glossaryRepository;
 
-    public LevelOfStudyService(GlossaryRepository glossaryRepository, LevelOfStudyRepository levelOfStudyRepository) {
+    public LevelOfStudyService(GlossaryRepository glossaryRepository,
+                               LevelOfStudyRepository levelOfStudyRepository) {
         this.glossaryRepository = glossaryRepository;
         this.levelOfStudyRepository = levelOfStudyRepository;
     }
@@ -33,14 +34,23 @@ public class LevelOfStudyService {
         }
     }
 
+    public ResponseLevelOfStudyDto findByPollId(String id) {
+        if (levelOfStudyRepository.findByPollId(id).isPresent()) {
+            LevelOfStudyEntity levelOfStudyEntity = levelOfStudyRepository.findByPollId(id).get();
+            return LevelOfStudyUtils.levelOfStudyEntityToDto(levelOfStudyEntity);
+        } else {
+            return null;
+        }
+    }
+
     public ResponseLevelOfStudyDto create(RequestLevelOfStudyDto levelOfStudyDto) {
         if (levelOfStudyRepository.findByUserName(levelOfStudyDto.getUserName()).isPresent()) {
             return update(levelOfStudyDto);
         } else {
-            Set<GlossaryEntity> glossaryEntitySet = glossaryRepository.findAllByLevel(levelOfStudyDto.getLevelOfStudy());
+            if(levelOfStudyDto.getTimeClass()==null){
+                levelOfStudyDto.setTimeClass(1);
+            }
             LevelOfStudyEntity levelOfStudyEntity = LevelOfStudyUtils.levelOfStudyDtoToEntity(levelOfStudyDto);
-            levelOfStudyEntity.setGlossaryEntitySet(glossaryEntitySet);
-            levelOfStudyEntity.setTimeClass(1);
             levelOfStudyEntity = levelOfStudyRepository.save(levelOfStudyEntity);
             return LevelOfStudyUtils.levelOfStudyEntityToDto(levelOfStudyEntity);
         }
@@ -61,27 +71,44 @@ public class LevelOfStudyService {
                 time = levelOfStudyDto.getTimeClass();
             }
             levelOfStudyEntity.setTimeClass(time);
-            if (levelOfStudyDto.getLevelOfStudy() == null) {
+            if(levelOfStudyDto.getLevelOfStudy() == null){
                 level = levelOfStudyEntity.getLevelOfStudy();
-                glossaryEntitySet = levelOfStudyEntity.getGlossaryEntitySet();
-            } else {
-                levelOfStudyEntity.setGlossaryEntitySet(null);
-                levelOfStudyEntity = levelOfStudyRepository.save(levelOfStudyEntity);
-
+            }else{
                 level = levelOfStudyDto.getLevelOfStudy();
-                glossaryEntitySet = glossaryRepository.findAllByLevel(level);
             }
             levelOfStudyEntity.setLevelOfStudy(level);
-            levelOfStudyEntity.setGlossaryEntitySet(glossaryEntitySet);
-
             levelOfStudyEntity = levelOfStudyRepository.save(levelOfStudyEntity);
             return LevelOfStudyUtils.levelOfStudyEntityToDto(levelOfStudyEntity);
+        }
+    }
+
+    public void updatePoll(String userName, String id) {
+        if (!levelOfStudyRepository.findByUserName(userName).isPresent()) {
+            throw new NoSuchElementException("Вы еще не зарегистрированны");
+        } else {
+            LevelOfStudyEntity levelOfStudyEntity = levelOfStudyRepository
+                    .findByUserName(userName).get();
+            levelOfStudyEntity.setPollId(id);
+            levelOfStudyRepository.save(levelOfStudyEntity);
         }
     }
 
 
     public void delete(String userName) {
         levelOfStudyRepository.deleteByUserName(userName);
+    }
+
+
+    public void updateStudy(String userName, boolean isStudy, Long currentTimeMillis) {
+        if (!levelOfStudyRepository.findByUserName(userName).isPresent()) {
+            throw new NoSuchElementException("Вы еще не зарегистрированны");
+        } else {
+            LevelOfStudyEntity levelOfStudyEntity = levelOfStudyRepository
+                    .findByUserName(userName).get();
+            levelOfStudyEntity.setStudy(isStudy);
+            levelOfStudyEntity.setStartPollTime(currentTimeMillis);
+            levelOfStudyRepository.save(levelOfStudyEntity);
+        }
     }
 
 }

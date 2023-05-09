@@ -5,7 +5,6 @@ import com.gonzik28.SpringDemoBot.config.BotConfig;
 import com.gonzik28.SpringDemoBot.dto.*;
 import com.gonzik28.SpringDemoBot.service.GlossaryService;
 import com.gonzik28.SpringDemoBot.service.LevelOfStudyService;
-import com.gonzik28.SpringDemoBot.service.StudyOptionsService;
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
@@ -22,7 +21,6 @@ public class TelegramBot extends TelegramLongPollingBot {
     final BotConfig config;
     private final GlossaryService glossaryService;
     private final LevelOfStudyService levelOfStudyService;
-    private final StudyOptionsService studyOptionsService;
     private final int MAX_QUESTIONS = 3;
     private static final String HELP_TEXT = "This bot is creating to English glossary.\n"
             + "Type /start too see a welcome message \n"
@@ -31,11 +29,10 @@ public class TelegramBot extends TelegramLongPollingBot {
             + "Type /exit too see a exit message";
 
     public TelegramBot(BotConfig config, LevelOfStudyService levelOfStudyService,
-                       GlossaryService glossaryService, StudyOptionsService studyOptionsService) {
+                       GlossaryService glossaryService) {
         this.config = config;
         this.glossaryService = glossaryService;
         this.levelOfStudyService = levelOfStudyService;
-        this.studyOptionsService = studyOptionsService;
         try {
             this.execute(Options.generatorMenu());
         } catch (TelegramApiException e) {
@@ -52,11 +49,10 @@ public class TelegramBot extends TelegramLongPollingBot {
             String userName = update.getMessage().getChat().getUserName();
             try {
                 if (levelOfStudyService.findByUserName(userName) != null &&
-                        studyOptionsService.findByUserName(userName).isStudy()) {
+                        levelOfStudyService.findByUserName(userName).isStudy()) {
                     Integer num = Integer.parseInt(messageText);
                     if (num > 0) {
-                        levelOfStudyService.update(Options.updateTimeFalse(userName, num));
-                        studyOptionsService.updateStudy(userName, false, null);
+                        levelOfStudyService.update(Options.updateTimeFalse(userName, num, false));
                         messageText = "/teach";
                     } else {
                         messageText = "/time";
@@ -79,21 +75,21 @@ public class TelegramBot extends TelegramLongPollingBot {
                     levelCommandReceived(chatId, userName, messageText);
                     break;
                 case "/time":
-                    if (studyOptionsService.findByUserName(userName) != null) {
-                        studyOptionsService.updateStudy(userName, true, System.currentTimeMillis());
+                    if (levelOfStudyService.findByUserName(userName) != null) {
+                        levelOfStudyService.updateStudy(userName, true, System.currentTimeMillis());
                     } else {
-                        studyOptionsService.create(Options.pollSetNull(chatId, userName, true));
+                        levelOfStudyService.create(Options.pollSetNull(chatId, userName, true ));
                     }
                     timeCommandReceived(chatId);
                     break;
                 case "/teach":
-                    studyOptionsService.updateStudy(userName, true, System.currentTimeMillis());
+                    levelOfStudyService.updateStudy(userName, true, System.currentTimeMillis());
                     teachCommandReceived(chatId, userName);
                     break;
                 case "/exit":
-                    studyOptionsService.updateStudy(userName, false, null);
+                    levelOfStudyService.updateStudy(userName, false, null);
                     exitCommandReceived(chatId, firstName);
-                    studyOptionsService.updatePoll(userName, null);
+                    levelOfStudyService.updatePoll(userName, null);
                     break;
                 case "/help":
                     sendMessage(chatId, HELP_TEXT);
@@ -101,19 +97,17 @@ public class TelegramBot extends TelegramLongPollingBot {
                 default:
                     sendMessage(chatId, "Sorry, command was not recognized");
             }
-        } else if (Options.isPoolSend(update.getPoll(), studyOptionsService)) {
-            long chatId = Long.parseLong(studyOptionsService.findByPollId(update.getPoll().getId())
+        } else if (Options.isPoolSend(update.getPoll(), levelOfStudyService)) {
+            long chatId = Long.parseLong(levelOfStudyService.findByPollId(update.getPoll().getId())
                     .getChatId().trim());
-            String userName = studyOptionsService.findByPollId(update.getPoll().getId())
-                    .getResponseLevelOfStudyDto().getUserName();
+            String userName = levelOfStudyService.findByPollId(update.getPoll().getId()).getUserName();
             teachCommandReceived(chatId, userName);
-        } else if (Options.isExitPoolSend(update.getPoll(), studyOptionsService)) {
-            long chatId = Long.parseLong(studyOptionsService.findByPollId(update.getPoll().getId())
+        } else if (Options.isExitPoolSend(update.getPoll(), levelOfStudyService)) {
+            long chatId = Long.parseLong(levelOfStudyService.findByPollId(update.getPoll().getId())
                     .getChatId().trim());
-            String userName = studyOptionsService.findByPollId(update.getPoll().getId())
-                    .getResponseLevelOfStudyDto().getUserName();
+            String userName = levelOfStudyService.findByPollId(update.getPoll().getId()).getUserName();
             sendMessage(chatId, "Yor time class finish");
-            studyOptionsService.updatePoll(userName, null);
+            levelOfStudyService.updatePoll(userName, null);
         }
     }
 
@@ -136,12 +130,9 @@ public class TelegramBot extends TelegramLongPollingBot {
         RequestLevelOfStudyDto requestLevelOfStudyDto = new RequestLevelOfStudyDto();
         requestLevelOfStudyDto.setUserName(userName);
         requestLevelOfStudyDto.setLevelOfStudy(level);
+        requestLevelOfStudyDto.setChatId(String.valueOf(chatId));
+        requestLevelOfStudyDto.setStudy(false);
         levelOfStudyService.create(requestLevelOfStudyDto);
-        if (studyOptionsService.findByUserName(userName) == null) {
-            studyOptionsService.create(Options.pollSetNull(chatId, userName, false));
-        } else {
-            studyOptionsService.updateStudy(userName, false, null);
-        }
         String answer = "I am making a program, you can type /teach command to start learning \n " +
                 "Training time is 1 minute, if you want to change it, click /time";
         sendMessage(chatId, answer);
@@ -220,7 +211,7 @@ public class TelegramBot extends TelegramLongPollingBot {
         sendPoll.setCorrectOptionId(correctId);
         try {
             Poll poll = execute(sendPoll).getPoll();
-            studyOptionsService.updatePoll(userName, poll.getId());
+            levelOfStudyService.updatePoll(userName, poll.getId());
         } catch (TelegramApiException e) {
             throw new RuntimeException(e);
         }

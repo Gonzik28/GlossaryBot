@@ -17,15 +17,9 @@ public class LevelOfStudyEntity {
     private String userName;
     private String levelOfStudy;
     private int timeClass;
-    @ManyToMany
-    @JoinTable(
-            name = "glossary_level_of_study",
-            joinColumns = @JoinColumn(name = "user_name"),
-            inverseJoinColumns = {
-                    @JoinColumn(name = "glossary_key_translate"),
-                    @JoinColumn(name = "glossary_key_word"),
-            })
-    private Set<GlossaryEntity> glossaryEntitySet = new HashSet<>();
-    @OneToOne(mappedBy = "levelOfStudy")
-    private StudyOptionsEntity studyOptionsEntity;
+    private boolean study;
+    private String chatId;
+    @Column(name = "poll_id")
+    private String pollId;
+    private Long startPollTime;
 }

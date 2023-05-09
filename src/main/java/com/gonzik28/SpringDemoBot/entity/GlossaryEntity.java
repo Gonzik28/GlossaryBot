@@ -16,6 +16,4 @@ public class GlossaryEntity {
     @EmbeddedId
     private GlossaryId id;
     private String level;
-    @ManyToMany(mappedBy = "glossaryEntitySet")
-    private Set<LevelOfStudyEntity> levelOfStudyEntities = new HashSet<>();
 }
