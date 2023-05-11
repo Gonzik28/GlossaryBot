@@ -8,6 +8,7 @@ import org.telegram.telegrambots.meta.api.objects.commands.BotCommand;
 import org.telegram.telegrambots.meta.api.objects.commands.scope.BotCommandScopeDefault;
 import org.telegram.telegrambots.meta.api.objects.polls.Poll;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboardMarkup;
+import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboardRemove;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.KeyboardButton;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.KeyboardRow;
 
@@ -15,7 +16,7 @@ import java.util.*;
 import java.util.concurrent.ThreadLocalRandom;
 
 public class Options {
-
+    private static final int MILLISECOND_IN_MINUTE = 60_000;
     static ReplyKeyboardMarkup keyboardKnowledgeLevel() {
         ReplyKeyboardMarkup replyKeyboardMarkup = new ReplyKeyboardMarkup();
         List<KeyboardRow> keyboardRows = new ArrayList<>();
@@ -47,13 +48,6 @@ public class Options {
         return replyKeyboardMarkup;
     }
 
-    static RequestLevelOfStudyDto updateTimeFalse(String userName, Integer number, boolean isStudy){
-        RequestLevelOfStudyDto requestLevelOfStudyDto = new RequestLevelOfStudyDto();
-        requestLevelOfStudyDto.setStudy(isStudy);
-        requestLevelOfStudyDto.setUserName(userName);
-        requestLevelOfStudyDto.setTimeClass(number);
-        return requestLevelOfStudyDto;
-    }
 
     static Set<Integer> generatorIndex(int maxValue, int sizeSet) {
         Set<Integer> indexes = new HashSet<>();
@@ -70,6 +64,7 @@ public class Options {
         commands.add(new BotCommand("/time", "Длительность одного урока"));
         commands.add(new BotCommand("/teach", "Начало обучения"));
         commands.add(new BotCommand("/exit", "Завершение обучения"));
+        commands.add(new BotCommand("/level", "Изменение уровня изучения"));
         commands.add(new BotCommand("/help", "Подсказка о командах"));
         return new SetMyCommands(commands, new BotCommandScopeDefault(), null);
     }
@@ -95,19 +90,19 @@ public class Options {
         }
     }
 
-    static boolean pollIsOpen(Poll poll, LevelOfStudyService levelOfStudyService){
+    static boolean pollIsOpen(Poll poll, LevelOfStudyService levelOfStudyService) {
         boolean isPoll = (poll != null);
         boolean pollSave = (levelOfStudyService.findByPollId(poll.getId()) != null);
-        if(pollSave && isPoll){
+        if (pollSave && isPoll) {
             return true;
-        }else{
+        } else {
             return false;
         }
     }
 
-    static boolean timeIsExit(ResponseLevelOfStudyDto responseLevelOfStudyDto){
+    static boolean timeIsExit(ResponseLevelOfStudyDto responseLevelOfStudyDto) {
         return responseLevelOfStudyDto.getStartPollTime() +
-                60_000 * responseLevelOfStudyDto.getTimeClass() > System.currentTimeMillis();
+                MILLISECOND_IN_MINUTE * responseLevelOfStudyDto.getTimeClass() > System.currentTimeMillis();
     }
 
     public static RequestLevelOfStudyDto pollSetNull(long chatId, String userName, boolean isStudy) {
@@ -117,4 +112,5 @@ public class Options {
         requestLevelOfStudyDto.setStudy(isStudy);
         return requestLevelOfStudyDto;
     }
+
 }

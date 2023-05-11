@@ -2,31 +2,39 @@ package com.gonzik28.SpringDemoBot.controller;
 
 import com.gonzik28.SpringDemoBot.config.BotConfig;
 
-import com.gonzik28.SpringDemoBot.dto.*;
 import com.gonzik28.SpringDemoBot.service.GlossaryService;
 import com.gonzik28.SpringDemoBot.service.LevelOfStudyService;
+import com.groupdocs.conversion.Converter;
+import com.groupdocs.conversion.filetypes.SpreadsheetFileType;
+import com.groupdocs.conversion.options.convert.SpreadsheetConvertOptions;
+import org.apache.commons.io.FilenameUtils;
+import org.json.JSONObject;
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
+import org.telegram.telegrambots.meta.api.objects.Document;
+
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.api.objects.polls.Poll;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboardMarkup;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 import org.telegram.telegrambots.meta.api.methods.polls.SendPoll;
 
+import java.io.*;
+import java.net.URL;
 import java.util.*;
+
+import static com.gonzik28.SpringDemoBot.controller.Command.*;
 
 @Component
 public class TelegramBot extends TelegramLongPollingBot {
     final BotConfig config;
     private final GlossaryService glossaryService;
     private final LevelOfStudyService levelOfStudyService;
-    private final int MAX_QUESTIONS = 3;
-    private static final String HELP_TEXT = "This bot is creating to English glossary.\n"
-            + "Type /start too see a welcome message \n"
-            + "Type /time change time quiz \n"
-            + "Type /teach too see a quiz message \n"
-            + "Type /exit too see a exit message";
+
+    private final String FILE_EXTENSION_XLS = "xls";
+    private final String FILE_EXTENSION_XLSX = "xlsx";
+    private final String SAVE_DIRECTORY = "src/main/resources/";
 
     public TelegramBot(BotConfig config, LevelOfStudyService levelOfStudyService,
                        GlossaryService glossaryService) {
@@ -43,77 +51,156 @@ public class TelegramBot extends TelegramLongPollingBot {
     @Override
     public void onUpdateReceived(Update update) {
         if (update.hasMessage() && update.getMessage().hasText()) {
-            String messageText = update.getMessage().getText();
-            long chatId = update.getMessage().getChatId();
-            String firstName = update.getMessage().getChat().getFirstName();
-            String userName = update.getMessage().getChat().getUserName();
-            try {
-                if (levelOfStudyService.findByUserName(userName) != null &&
-                        levelOfStudyService.findByUserName(userName).isStudy()) {
-                    Integer num = Integer.parseInt(messageText);
-                    if (num > 0) {
-                        levelOfStudyService.update(Options.updateTimeFalse(userName, num, false));
-                        messageText = "/teach";
-                    } else {
-                        messageText = "/time";
-                    }
-                }
-            } catch (NoSuchElementException | NumberFormatException e) {
-                e.getMessage();
-            }
-            switch (messageText) {
-                case "/start":
-                    startCommandReceived(chatId, firstName, userName);
-                    break;
-                case "A0":
-                case "A1":
-                case "A2":
-                case "B1":
-                case "B2":
-                case "C1":
-                case "C2":
-                    levelCommandReceived(chatId, userName, messageText);
-                    break;
-                case "/time":
-                    if (levelOfStudyService.findByUserName(userName) != null) {
-                        levelOfStudyService.updateStudy(userName, true, System.currentTimeMillis());
-                    } else {
-                        levelOfStudyService.create(Options.pollSetNull(chatId, userName, true ));
-                    }
-                    timeCommandReceived(chatId);
-                    break;
-                case "/teach":
-                    levelOfStudyService.updateStudy(userName, true, System.currentTimeMillis());
-                    teachCommandReceived(chatId, userName);
-                    break;
-                case "/exit":
-                    levelOfStudyService.updateStudy(userName, false, null);
-                    exitCommandReceived(chatId, firstName);
-                    levelOfStudyService.updatePoll(userName, null);
-                    break;
-                case "/help":
-                    sendMessage(chatId, HELP_TEXT);
-                    break;
-                default:
-                    sendMessage(chatId, "Sorry, command was not recognized");
-            }
+            messageText(update, levelOfStudyService, glossaryService);
+        } else if (update.hasMessage() && update.getMessage().hasDocument()) {
+            documentPull(update);
         } else if (Options.isPoolSend(update.getPoll(), levelOfStudyService)) {
             long chatId = Long.parseLong(levelOfStudyService.findByPollId(update.getPoll().getId())
                     .getChatId().trim());
             String userName = levelOfStudyService.findByPollId(update.getPoll().getId()).getUserName();
-            teachCommandReceived(chatId, userName);
+            HashMap<String, Object> send = teachCommandReceived(userName, levelOfStudyService, glossaryService);
+            List<String> option = Arrays.asList(send.get("options").toString()
+                    .replace("[", "").replace("]", "").split(", "));
+            sendMessage(chatId, String.valueOf(send.get("question")), option,
+                    Integer.parseInt(String.valueOf(send.get("indexQuestion"))),
+                    String.valueOf(send.get("userName")));
         } else if (Options.isExitPoolSend(update.getPoll(), levelOfStudyService)) {
             long chatId = Long.parseLong(levelOfStudyService.findByPollId(update.getPoll().getId())
                     .getChatId().trim());
             String userName = levelOfStudyService.findByPollId(update.getPoll().getId()).getUserName();
-            sendMessage(chatId, "Yor time class finish");
+            sendMessage(chatId, "Your time class finish");
             levelOfStudyService.updatePoll(userName, null);
         }
     }
 
-    private void timeCommandReceived(long chatId) {
-        String answer = "Введите количество минут, которые Вы готовы уделить изучению (целое число)";
-        sendMessage(chatId, answer, Options.keyboardTime());
+    private final String HELP_TEXT = "This bot is creating to English glossary.\n"
+            + "Type /start too see a welcome message \n"
+            + "Type /time change time quiz \n"
+            + "Type /teach too see a quiz message \n"
+            + "Type /level change level \n"
+            + "Type /exit too see a exit message";
+
+    private void messageText(Update update, LevelOfStudyService levelOfStudyService,
+                             GlossaryService glossaryService) {
+        String messageText = update.getMessage().getText();
+        long chatId = update.getMessage().getChatId();
+        String firstName = update.getMessage().getChat().getFirstName();
+        String userName = update.getMessage().getChat().getUserName();
+        messageText = Command.timeUpdate(levelOfStudyService, userName, messageText);
+        HashMap<String, Object> send;
+        switch (messageText) {
+            case "/start":
+                send = Command.startCommandReceived(firstName, userName, levelOfStudyService);
+                if (send.containsKey("keyboard")) {
+                    sendMessage(chatId, String.valueOf(send.get("answer")),
+                            (ReplyKeyboardMarkup) send.get("keyboard"));
+                } else {
+                    sendMessage(chatId, String.valueOf(send.get("answer")));
+                }
+                break;
+            case "A0":
+            case "A1":
+            case "A2":
+            case "B1":
+            case "B2":
+            case "C1":
+            case "C2":
+                sendMessage(chatId, levelCommandReceived(chatId, userName, messageText, levelOfStudyService));
+                break;
+            case "/time":
+                send = timeCommandReceived(chatId, userName, levelOfStudyService);
+                sendMessage(chatId, String.valueOf(send.get("answer")),
+                        (ReplyKeyboardMarkup) send.get("replyKeyboardMarkup"));
+                break;
+            case "/teach":
+                levelOfStudyService.updateStudy(userName, true, System.currentTimeMillis());
+                send = teachCommandReceived(userName, levelOfStudyService, glossaryService);
+                List<String> option = Arrays.asList(send.get("options").toString()
+                        .replace("[", "").replace("]", "").split(", "));
+
+                sendMessage(chatId, String.valueOf(send.get("question")), option,
+                        Integer.parseInt(String.valueOf(send.get("indexQuestion"))),
+                        String.valueOf(send.get("userName")));
+                break;
+            case "/exit":
+                levelOfStudyService.updateStudy(userName, false, null);
+                sendMessage(chatId, Command.exitCommandReceived(firstName));
+                levelOfStudyService.updatePoll(userName, null);
+                break;
+            case "/help":
+                sendMessage(chatId, HELP_TEXT);
+                break;
+            case "/level":
+                send = Command.updateLevel();
+                sendMessage(chatId, String.valueOf(send.get("answer")),
+                        (ReplyKeyboardMarkup) send.get("keyboard"));
+                break;
+            default:
+                sendMessage(chatId, "Sorry, command was not recognized");
+        }
+    }
+
+    private void documentPull(Update update) {
+        Document document = update.getMessage().getDocument();
+        String name = document.getFileName();
+        String extension = FilenameUtils.getExtension(name);
+        Long chatId = update.getMessage().getChat().getId();
+        if (extension.equals("xls") || extension.equals("xlsx")) {
+            try {
+                File load = loadFile(document);
+                Converter converter = new Converter(load.getPath());
+                SpreadsheetConvertOptions options = new SpreadsheetConvertOptions();
+                options.setFormat(SpreadsheetFileType.Csv); // Specify the conversion format
+                converter.convert("src/main/resources/" + name + ".csv", options);
+                sendMessage(chatId, "Это нужный документ");
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        } else {
+            sendMessage(chatId, "Это не верный формат");
+        }
+    }
+
+    private File loadFile(Document document) throws IOException {
+        String botToken = config.getToken();
+        String fileId = document.getFileId();
+
+        URL url = new URL("https://api.telegram.org/bot" + botToken + "/getFile?file_id=" + fileId);
+        InputStream inputStream = url.openConnection().getInputStream();
+        String response = new String(inputStream.readAllBytes());
+        inputStream.close();
+
+        JSONObject jsonObject = new JSONObject(response);
+        boolean ok = jsonObject.getBoolean("ok");
+        if (ok) {
+            JSONObject result = jsonObject.getJSONObject("result");
+            String filePath = result.getString("file_path");
+
+            String fileName = new File(filePath).getName();
+            String fileExtension = fileName.substring(fileName.lastIndexOf('.') + 1);
+            if (fileExtension.equalsIgnoreCase(FILE_EXTENSION_XLS) || fileExtension.equalsIgnoreCase(FILE_EXTENSION_XLSX)) {
+                URL fileUrl = new URL("https://api.telegram.org/file/bot" + botToken + "/" + filePath);
+                InputStream fileInputStream = fileUrl.openConnection().getInputStream();
+
+                String saveFilePath = SAVE_DIRECTORY + fileName;
+                FileOutputStream outputStream = new FileOutputStream(saveFilePath);
+                byte[] buffer = new byte[1024];
+                int bytesRead;
+                while ((bytesRead = fileInputStream.read(buffer)) != -1) {
+                    outputStream.write(buffer, 0, bytesRead);
+                }
+                outputStream.close();
+                fileInputStream.close();
+                System.out.println("File saved to " + saveFilePath);
+                return new File(saveFilePath);
+            } else {
+                System.out.println("File type not supported.");
+                return null;
+            }
+        } else {
+            System.out.println("Failed to get file information.");
+            return null;
+        }
     }
 
     @Override
@@ -124,58 +211,6 @@ public class TelegramBot extends TelegramLongPollingBot {
     @Override
     public String getBotToken() {
         return config.getToken();
-    }
-
-    private void levelCommandReceived(long chatId, String userName, String level) {
-        RequestLevelOfStudyDto requestLevelOfStudyDto = new RequestLevelOfStudyDto();
-        requestLevelOfStudyDto.setUserName(userName);
-        requestLevelOfStudyDto.setLevelOfStudy(level);
-        requestLevelOfStudyDto.setChatId(String.valueOf(chatId));
-        requestLevelOfStudyDto.setStudy(false);
-        levelOfStudyService.create(requestLevelOfStudyDto);
-        String answer = "I am making a program, you can type /teach command to start learning \n " +
-                "Training time is 1 minute, if you want to change it, click /time";
-        sendMessage(chatId, answer);
-    }
-
-    private void startCommandReceived(long chatId, String name, String userName) {
-        StringBuilder answer = new StringBuilder("Hi, " + name + ", nice to meet you!");
-        if (levelOfStudyService.findByUserName(userName) == null) {
-            answer.append('\n' + "Indicate your level of knowledge");
-            sendMessage(chatId, answer.toString(), Options.keyboardKnowledgeLevel());
-        } else {
-            sendMessage(chatId, answer.toString());
-        }
-    }
-
-    private void exitCommandReceived(long chatId, String name) {
-        String answer = "Bye, " + name + "!";
-        sendMessage(chatId, answer);
-    }
-
-    private void teachCommandReceived(long chatId, String userName) {
-        ResponseLevelOfStudyDto responseLevelOfStudyDto = levelOfStudyService.findByUserName(userName);
-        String level = responseLevelOfStudyDto.getLevelOfStudy();
-        Set<ResponseGlossaryDto> glossarySet = glossaryService.findByLevelAll(level);
-        List<ResponseGlossaryDto> glossaryDtoList = new ArrayList<>(glossarySet);
-        generatorPoll(chatId, glossaryDtoList, userName);
-    }
-
-    private void generatorPoll(Long chatId, List<ResponseGlossaryDto> glossaryDtoList, String userName) {
-        StringBuilder stringBuilder = new StringBuilder();
-        stringBuilder.append("Выберите перевод слова ");
-        List<String> options = new ArrayList<>();
-        Set<Integer> random = Options.generatorIndex(MAX_QUESTIONS, glossaryDtoList.size());
-        int indexQuestion = (int) (Math.random() * MAX_QUESTIONS);
-        int i = 0;
-        for (Integer item : random) {
-            options.add(glossaryDtoList.get(item).getWord().trim());
-            if (i == indexQuestion) {
-                stringBuilder.append(glossaryDtoList.get(item).getTranslate().trim());
-            }
-            i++;
-        }
-        sendMessage(chatId, stringBuilder.toString(), options, indexQuestion, userName);
     }
 
     private void sendMessage(long chatId, String textToSend) {
@@ -201,7 +236,8 @@ public class TelegramBot extends TelegramLongPollingBot {
         }
     }
 
-    private void sendMessage(long chatId, String question, List<String> options, int correctId, String userName) {
+    private void sendMessage(long chatId, String question, List<String> options,
+                             Integer correctId, String userName) {
         SendPoll sendPoll = new SendPoll();
         sendPoll.setChatId(String.valueOf(chatId));
         sendPoll.setType("quiz");
@@ -216,4 +252,5 @@ public class TelegramBot extends TelegramLongPollingBot {
             throw new RuntimeException(e);
         }
     }
+
 }
