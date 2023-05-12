@@ -4,15 +4,9 @@ import com.gonzik28.SpringDemoBot.config.BotConfig;
 
 import com.gonzik28.SpringDemoBot.service.GlossaryService;
 import com.gonzik28.SpringDemoBot.service.LevelOfStudyService;
-import com.groupdocs.conversion.Converter;
-import com.groupdocs.conversion.filetypes.SpreadsheetFileType;
-import com.groupdocs.conversion.options.convert.SpreadsheetConvertOptions;
-import org.apache.commons.io.FilenameUtils;
-import org.json.JSONObject;
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
-import org.telegram.telegrambots.meta.api.objects.Document;
 
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.api.objects.polls.Poll;
@@ -20,8 +14,6 @@ import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboardMar
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 import org.telegram.telegrambots.meta.api.methods.polls.SendPoll;
 
-import java.io.*;
-import java.net.URL;
 import java.util.*;
 
 import static com.gonzik28.SpringDemoBot.controller.Command.*;
@@ -31,10 +23,6 @@ public class TelegramBot extends TelegramLongPollingBot {
     final BotConfig config;
     private final GlossaryService glossaryService;
     private final LevelOfStudyService levelOfStudyService;
-
-    private final String FILE_EXTENSION_XLS = "xls";
-    private final String FILE_EXTENSION_XLSX = "xlsx";
-    private final String SAVE_DIRECTORY = "src/main/resources/";
 
     public TelegramBot(BotConfig config, LevelOfStudyService levelOfStudyService,
                        GlossaryService glossaryService) {
@@ -47,13 +35,25 @@ public class TelegramBot extends TelegramLongPollingBot {
             e.getMessage();
         }
     }
+    @Override
+    public String getBotUsername() {
+        return config.getBotName();
+    }
+
+    @Override
+    public String getBotToken() {
+        return config.getToken();
+    }
 
     @Override
     public void onUpdateReceived(Update update) {
         if (update.hasMessage() && update.getMessage().hasText()) {
             messageText(update, levelOfStudyService, glossaryService);
         } else if (update.hasMessage() && update.getMessage().hasDocument()) {
-            documentPull(update);
+            Long chatId = update.getMessage().getChat().getId();
+            String securityAnswer = (DocumentEdit.documentPull(update, getBotToken(), glossaryService)) ?
+                    "Это нужный документ" : "Это не верный формат";
+            sendMessage(chatId, securityAnswer);
         } else if (Options.isPoolSend(update.getPoll(), levelOfStudyService)) {
             long chatId = Long.parseLong(levelOfStudyService.findByPollId(update.getPoll().getId())
                     .getChatId().trim());
@@ -140,78 +140,6 @@ public class TelegramBot extends TelegramLongPollingBot {
         }
     }
 
-    private void documentPull(Update update) {
-        Document document = update.getMessage().getDocument();
-        String name = document.getFileName();
-        String extension = FilenameUtils.getExtension(name);
-        Long chatId = update.getMessage().getChat().getId();
-        if (extension.equals("xls") || extension.equals("xlsx")) {
-            try {
-                File load = loadFile(document);
-                Converter converter = new Converter(load.getPath());
-                SpreadsheetConvertOptions options = new SpreadsheetConvertOptions();
-                options.setFormat(SpreadsheetFileType.Csv); // Specify the conversion format
-                converter.convert("src/main/resources/" + name + ".csv", options);
-                sendMessage(chatId, "Это нужный документ");
-            } catch (IOException e) {
-                throw new RuntimeException(e);
-            }
-        } else {
-            sendMessage(chatId, "Это не верный формат");
-        }
-    }
-
-    private File loadFile(Document document) throws IOException {
-        String botToken = config.getToken();
-        String fileId = document.getFileId();
-
-        URL url = new URL("https://api.telegram.org/bot" + botToken + "/getFile?file_id=" + fileId);
-        InputStream inputStream = url.openConnection().getInputStream();
-        String response = new String(inputStream.readAllBytes());
-        inputStream.close();
-
-        JSONObject jsonObject = new JSONObject(response);
-        boolean ok = jsonObject.getBoolean("ok");
-        if (ok) {
-            JSONObject result = jsonObject.getJSONObject("result");
-            String filePath = result.getString("file_path");
-
-            String fileName = new File(filePath).getName();
-            String fileExtension = fileName.substring(fileName.lastIndexOf('.') + 1);
-            if (fileExtension.equalsIgnoreCase(FILE_EXTENSION_XLS) || fileExtension.equalsIgnoreCase(FILE_EXTENSION_XLSX)) {
-                URL fileUrl = new URL("https://api.telegram.org/file/bot" + botToken + "/" + filePath);
-                InputStream fileInputStream = fileUrl.openConnection().getInputStream();
-
-                String saveFilePath = SAVE_DIRECTORY + fileName;
-                FileOutputStream outputStream = new FileOutputStream(saveFilePath);
-                byte[] buffer = new byte[1024];
-                int bytesRead;
-                while ((bytesRead = fileInputStream.read(buffer)) != -1) {
-                    outputStream.write(buffer, 0, bytesRead);
-                }
-                outputStream.close();
-                fileInputStream.close();
-                System.out.println("File saved to " + saveFilePath);
-                return new File(saveFilePath);
-            } else {
-                System.out.println("File type not supported.");
-                return null;
-            }
-        } else {
-            System.out.println("Failed to get file information.");
-            return null;
-        }
-    }
-
-    @Override
-    public String getBotUsername() {
-        return config.getBotName();
-    }
-
-    @Override
-    public String getBotToken() {
-        return config.getToken();
-    }
 
     private void sendMessage(long chatId, String textToSend) {
         SendMessage message = new SendMessage();
