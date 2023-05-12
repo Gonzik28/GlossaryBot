@@ -59,7 +59,6 @@ public class LevelOfStudyService {
     public ResponseLevelOfStudyDto update(RequestLevelOfStudyDto levelOfStudyDto) {
         String level;
         int time;
-        Set<GlossaryEntity> glossaryEntitySet;
         if (!levelOfStudyRepository.findByUserName(levelOfStudyDto.getUserName()).isPresent()) {
             throw new NoSuchElementException("Вы еще не зарегистрированны");
         } else {

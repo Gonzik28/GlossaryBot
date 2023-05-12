@@ -29,7 +29,7 @@ public class GlossaryService {
         glossaryId.setTranslate(requestGlossaryDto.getTranslate());
         glossaryId.setWord(requestGlossaryDto.getWord());
         if(!glossaryRepository.findById(glossaryId).isPresent()){
-            throw new NoSuchElementException("Такой пары еще не существует");
+            return create(requestGlossaryDto);
         }else{
             GlossaryEntity glossaryEntity = glossaryRepository.findById(glossaryId).get();
             glossaryEntity.setLevel(requestGlossaryDto.getLevel());
@@ -43,7 +43,7 @@ public class GlossaryService {
         glossaryId.setTranslate(requestGlossaryDto.getTranslate());
         glossaryId.setWord(requestGlossaryDto.getWord());
         if(glossaryRepository.findById(glossaryId).isPresent()){
-            throw new NoSuchElementException("Такая пара уже существует");
+            return updateLevel(requestGlossaryDto);
         }else{
             GlossaryEntity glossaryEntity = new GlossaryEntity();
             glossaryEntity.setId(glossaryId);
