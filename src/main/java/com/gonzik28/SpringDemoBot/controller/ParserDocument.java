@@ -23,7 +23,7 @@ public class ParserDocument {
                     requestGlossaryDto.setLevel(fragments[2]);
                     glossaryDtos.add(requestGlossaryDto);
                 }else{
-                    System.out.println("Fail");
+                    System.out.println("Fail line: " + line.replace(" ", "") );
                     continue;
                 }
             }
@@ -35,8 +35,8 @@ public class ParserDocument {
 
     public static boolean correctFragment(String[] fragments){
         boolean correctArrSize = fragments.length == 3;
-        boolean correctEnglishAlphabet = fragments[0].matches("^[a-zA-Z0-9\\s-]+$");
-        boolean correctRussianAlphabet = fragments[1].matches("^[а-яА-ЯёЁ0-9\\s-]+$");
+        boolean correctEnglishAlphabet = fragments[0].matches("^[a-zA-Z0-9\\s\\W]+$");
+        boolean correctRussianAlphabet = fragments[1].matches("^[а-яА-ЯёЁ0-9\\s\\W]+$");
         boolean correctLevel = fragments[2].matches("^[A-C][0-2]$");
         if(correctArrSize && correctEnglishAlphabet && correctRussianAlphabet && correctLevel){
             return true;
